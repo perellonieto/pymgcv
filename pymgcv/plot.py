@@ -13,6 +13,7 @@ import pandas as pd
 from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.patches import Polygon
 from pandas import CategoricalDtype
@@ -275,9 +276,11 @@ def continuous_1d(
     level: str | None = None,
     n_standard_errors: int | float = 2,
     residuals: bool = False,
+    fit_density: bool = False,
     plot_kwargs: dict[str, Any] | None = None,
     fill_between_kwargs: dict[str, Any] | None = None,
     scatter_kwargs: dict[str, Any] | None = None,
+    fit_density_kwargs: dict[str, Any] | None = None,
     ax: Axes | None = None,
 ) -> Axes:
     """Plot 1D smooth or linear terms with confidence intervals.
@@ -306,6 +309,11 @@ def continuous_1d(
             Specifies the level to plot.
         n_standard_errors: Number of standard errors for confidence intervals.
         residuals: Whether to plot partial residuals.
+        fit_density: Whether to shade the background with the confidence density
+            of the fitted effect, equivalent to ``l_fitDens()`` in mgcViz. At each
+            point along the x axis, the colour shows the normal density with mean
+            the fitted effect and standard deviation its standard error, so the
+            effect is better determined where the colour is darker and narrower.
         plot_kwargs: Keyword arguments passed to ``matplotlib.pyplot.plot`` for
             the main curve.
         fill_between_kwargs: Keyword arguments passed to
@@ -313,6 +321,14 @@ def continuous_1d(
             Pass `{"disable": True}` to disable the confidence interval band.
         scatter_kwargs: Keyword arguments passed to `matplotlib.pyplot.scatter`
             for partial residuals (ignored if `residuals=False`).
+        fit_density_kwargs: Options for the fitted-effect density (ignored if
+            `fit_density=False`). As in mgcViz's ``l_fitDens``: ``n`` (default 50)
+            is the number of grid points along the y axis, ``level`` (default 0.95)
+            sets the height of the shaded area to ``|qnorm(level)|`` standard errors
+            either side of the effect (mgcViz's convention: 0.95 gives ±1.645), and
+            ``trans`` (default identity) is a function applied to the density before
+            colouring. Any other keys are passed to `matplotlib.pyplot.pcolormesh`
+            (default colour map: white to blue, as in mgcViz).
         ax: Matplotlib Axes object to plot on. If None, uses current axes.
 
     Returns:
@@ -382,6 +398,23 @@ def continuous_1d(
             kwargs["color"] = current_color
 
     pred = gam.partial_effect(term, target, spaced_data, compute_se=True)
+    assert pred.se is not None
+
+    # Fitted-effect density in the background (mgcViz's l_fitDens)
+    if fit_density:
+        density_kwargs = {} if fit_density_kwargs is None else dict(fit_density_kwargs)
+        n = density_kwargs.pop("n", 50)
+        level = density_kwargs.pop("level", 0.95)
+        trans = density_kwargs.pop("trans", None)
+        density_kwargs.setdefault(
+            "cmap",
+            LinearSegmentedColormap.from_list("fit_density", ["white", "blue"]),
+        )
+        density_kwargs.setdefault("shading", "nearest")
+        y_grid, density = _fit_density_grid(pred.fit, pred.se, n=n, level=level)
+        if trans is not None:
+            density = trans(density)
+        ax.pcolormesh(x0_linspace, y_grid, density, **density_kwargs)
 
     # Add partial residuals
     if residuals and target in data and not _is_linear_functional(term, data):  # type: ignore
@@ -395,7 +428,6 @@ def continuous_1d(
         ax.scatter(data[term.varnames[0]], partial_residuals, **scatter_kwargs)
 
     # Plot interval
-    assert pred.se is not None
     _with_disable(ax.fill_between)(
         x0_linspace,
         pred.fit - n_standard_errors * pred.se,
@@ -1085,6 +1117,27 @@ def hexbin_residuals(
     ax.set_xlabel(var1)
     ax.set_ylabel(var2)
     return ax
+
+
+def _fit_density_grid(
+    fit: np.ndarray,
+    se: np.ndarray,
+    n: int = 50,
+    level: float = 0.95,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Grid and density of mgcViz's ``l_fitDens`` for a 1D effect.
+
+    Mirrors ``mgcViz:::l_fitDens.1D``: ``n`` y values spanning
+    ``fit ± |qnorm(level)| * se``, and the normal density ``dnorm(fit, y, se)`` at
+    each (y, x) grid point.
+
+    Returns:
+        The y grid, shape ``(n,)``, and the density, shape ``(n, len(fit))``.
+    """
+    lev = abs(norm.ppf(level))
+    y_grid = np.linspace(np.min(fit - lev * se), np.max(fit + lev * se), n)
+    density = norm.pdf(y_grid[:, None], loc=fit[None, :], scale=se[None, :])
+    return y_grid, density
 
 
 def _with_disable(plot_func):

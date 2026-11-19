@@ -4,7 +4,9 @@ To see the plots created during testing, replace plt.close("all") with plt.show(
 """
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pytest
+from matplotlib.collections import QuadMesh
 
 import pymgcv.plot as gplt
 from pymgcv.gam import BAM, GAM, AbstractGAM
@@ -41,6 +43,78 @@ def test_continuous_1d(test_case: tc.GAMTestCase, kwargs: dict):
     term = list(gam.predictors.values())[0][0]
     gplt.continuous_1d(**kwargs, gam=gam, term=term, data=test_case.data)
     plt.close("all")
+
+
+@pytest.mark.parametrize(
+    ("test_case", "kwargs"),
+    cases_1d_continuous.values(),
+    ids=cases_1d_continuous.keys(),
+)
+def test_continuous_1d_fit_density(test_case: tc.GAMTestCase, kwargs: dict):
+    gam = test_case.gam_model.fit(test_case.data, **test_case.fit_kwargs)
+    term = list(gam.predictors.values())[0][0]
+    gplt.continuous_1d(
+        **kwargs,
+        gam=gam,
+        term=term,
+        data=test_case.data,
+        fit_density=True,
+        fit_density_kwargs={"n": 20, "trans": np.sqrt, "cmap": "Greys"},
+    )
+    plt.close("all")
+
+
+def test_fit_density_grid():
+    fit = np.array([0.0, 1.0, -0.5, 2.0])
+    se = np.array([0.5, 0.2, 1.0, 0.3])
+    y_grid, density = gplt._fit_density_grid(fit, se, n=7, level=0.95)
+
+    # Grid spans fit ± z * se over all x, with z = |qnorm(0.95)|
+    z = 1.6448536269514722
+    expected_y = np.linspace(np.min(fit - z * se), np.max(fit + z * se), 7)
+    np.testing.assert_allclose(y_grid, expected_y)
+
+    # Normal density with mean fit and sd se, rows indexed by y and columns by x
+    expected_density = np.exp(
+        -((y_grid[:, None] - fit) ** 2) / (2 * se**2),
+    ) / (se * np.sqrt(2 * np.pi))
+    assert density.shape == (7, 4)
+    np.testing.assert_allclose(density, expected_density)
+
+
+def test_fit_density_grid_integrates_to_one():
+    # With a wide range (±6 standard errors) each column is a normal density
+    fit = np.array([1.0, 1.0])
+    se = np.array([0.5, 0.5])
+    y_grid, density = gplt._fit_density_grid(fit, se, n=2001, level=1 - 1e-9)
+    np.testing.assert_allclose(np.trapezoid(density, y_grid, axis=0), 1, rtol=1e-6)
+
+
+def test_continuous_1d_fit_density_mesh():
+    test_case = tc.smooth_1d_gam(GAM)
+    gam = test_case.gam_model.fit(test_case.data, **test_case.fit_kwargs)
+    term = gam.predictors["y"][0]
+
+    def plot(**kwargs):
+        _, ax = plt.subplots()
+        gplt.continuous_1d(gam=gam, term=term, eval_density=30, ax=ax, **kwargs)
+        meshes = [c for c in ax.collections if isinstance(c, QuadMesh)]
+        plt.close("all")
+        return meshes
+
+    assert plot() == []  # No density unless requested
+
+    (mesh,) = plot(fit_density=True, fit_density_kwargs={"n": 20})
+    density = np.ma.getdata(mesh.get_array())
+    assert density.shape == (20, 30)
+    assert np.all(density >= 0)
+
+    (mesh_trans,) = plot(
+        fit_density=True,
+        fit_density_kwargs={"n": 20, "trans": np.sqrt, "cmap": "Greys"},
+    )
+    np.testing.assert_allclose(np.ma.getdata(mesh_trans.get_array()), np.sqrt(density))
+    assert mesh_trans.get_cmap().name == "Greys"
 
 
 def get_cases_2d_continuous(gam_type: type[AbstractGAM]):

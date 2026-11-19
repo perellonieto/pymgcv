@@ -39,6 +39,7 @@ dev = [
     "markdown-it-py",
     "nbconvert",
     "build",
+    "ipython",
 ]
 
 # ----------------- ruff config -------------------#
