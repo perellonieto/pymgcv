@@ -52,6 +52,7 @@ nav:
       - Linear functional: examples/linear_functional.ipynb
       - Basis functions:
           - Shrinkage smooths: examples/shrinkage_smooths.ipynb
+          - Spline on the sphere: examples/spline_on_sphere.ipynb
   - Applied Examples:
       - Ozone: examples/ozone.ipynb
       - Seasonal CO2: examples/seasonal_co2.ipynb

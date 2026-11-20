@@ -279,6 +279,11 @@ class SplineOnSphere(AbstractBasis):
     on the interval [-90, 90] and the second represents longitude on the interval [-180,
     180].
 
+    !!! example
+
+        For an example, see the
+        [spline on the sphere example](../examples/spline_on_sphere.ipynb).
+
     Args:
         m : An integer in [-1, 4]. Setting `m=-1` uses
             [`DuchonSpline(m=2,s=1/2)`](`pymgcv.basis_functions.DuchonSpline`). Setting
