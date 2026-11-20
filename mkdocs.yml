@@ -53,6 +53,7 @@ nav:
       - Basis functions:
           - Shrinkage smooths: examples/shrinkage_smooths.ipynb
           - Spline on the sphere: examples/spline_on_sphere.ipynb
+          - B-splines, P-splines and Duchon splines: examples/bspline_pspline_duchon.ipynb
   - Applied Examples:
       - Ozone: examples/ozone.ipynb
       - Seasonal CO2: examples/seasonal_co2.ipynb

@@ -252,6 +252,11 @@ class DuchonSpline(AbstractBasis):
     For example, ``DuchonSpline(m=1, s=d/2)`` can be used in order to use first
     derivative penalization for any $d$, and still yield continuous functions.
 
+    !!! example
+
+        For an example, see the [B-splines, P-splines and Duchon splines
+        example](../examples/bspline_pspline_duchon.ipynb).
+
     Args:
         m : Order of derivative to penalize.
         s : $s$ as described above, should be an integer divided by 2.
@@ -313,6 +318,11 @@ class BSpline(AbstractBasis):
     smooths constructed with [`T`][pymgcv.terms.T]).
     ``BSpline(degree=3, penalty_orders=[2])`` constructs a conventional cubic spline.
 
+    !!! example
+
+        For an example, see the [B-splines, P-splines and Duchon splines
+        example](../examples/bspline_pspline_duchon.ipynb).
+
     Args:
         degree: The degree of the B-spline basis (e.g. 3 for a cubic spline).
         penalty_orders: The derivative orders to penalize. Default to [degree - 1].
@@ -348,6 +358,11 @@ class PSpline(AbstractBasis):
     [`CubicSpline`][pymgcv.basis_functions.CubicSpline]) tend to yield better
     MSE performance. ``BSpline(degree=3, penalty_order=2)`` is
     cubic-spline-like.
+
+    !!! example
+
+        For an example, see the [B-splines, P-splines and Duchon splines
+        example](../examples/bspline_pspline_duchon.ipynb).
 
     Args:
         degree: Degree of the B-spline basis (e.g. 3 for cubic).
