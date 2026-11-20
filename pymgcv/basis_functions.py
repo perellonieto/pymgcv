@@ -103,7 +103,8 @@ class ThinPlateSpline(AbstractBasis):
 
     Args:
         shrinkage: If True, the penalty is modified so that the term is shrunk to zero
-            for a high enough smoothing parameter.
+            for a high enough smoothing parameter. See the
+            [shrinkage smooths example](../examples/shrinkage_smooths.ipynb).
         m: The order of the derivative in the thin plate spline penalty. If $d$ is the
             number of covariates for the smooth term, this must satisfy $m>(d+1)/2$. If
             left to None, the smallest value satisfying $m>(d+1)/2$ will be used, which
@@ -186,6 +187,15 @@ class CubicSpline(AbstractBasis):
     one-dimensional smooths does not imply they cannot be used for
     multivariate [`T`][pymgcv.terms.T] smooths,
     which are constructed from marginal bases.
+
+    !!! example
+
+        For examples, see the
+        [seasonal CO2 example](../examples/seasonal_co2.ipynb) (including a cyclic
+        spline for the month), the
+        [electricity demand BAM example](../examples/electricity_bam.ipynb), and
+        an example of using shrinkage smooths in the
+        [shrinkage smooths example](../examples/shrinkage_smooths.ipynb).
 
     Args:
         cyclic: If True, creates a cyclic spline where the function values
